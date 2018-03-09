@@ -1,0 +1,674 @@
+
+---
+title: "MEXSYS"
+author: ""
+date: "February 2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+data inputs: Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm
+            Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm
+            
+data ouputs:
+
+
+The first section is the SIMS pull and SHOULD NOT BE RUN UNLESS DIRECTED TO DO SO!
+
+The master SIMS file is in the CI library under Automated Data Downloads.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(officer)
+library(tidyr)
+library(tidyverse)
+library(reshape2)
+library(RColorBrewer)
+library(ggforce)
+library(latticeExtra)
+library(waterfall)
+library(plyr)
+library(ggplot2)
+library(ggthemes)
+library(openxlsx)
+library(sqldf)
+library(xlsx)
+
+
+#Cascadia 2018 Lagging
+#bring in all the Cle lines
+awtp.cle.1 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "CLE Forging") 
+awtp.cle.1$Mfg_location_line <- "CLE Forging" 
+
+awtp.cle.2 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "CLE HT") 
+awtp.cle.2$Mfg_location_line <- "CLE HT"
+
+awtp.cle.3 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "CLE X Plant Forging") 
+awtp.cle.3$Mfg_location_line <- "CLE X Plant Forging"
+
+awtp.cle.4 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "CLE Y Plant Forging") 
+awtp.cle.4$Mfg_location_line <- "CLE Y Plant Forging"
+
+awtp.cle.5 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "CLE 8002 Forging") 
+awtp.cle.5$Mfg_location_line <- "CLE 8002 Forging"
+
+awtp.cle.6 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "CLE 8003 Forging") 
+awtp.cle.6$Mfg_location_line <- "CLE 8003 Forging"
+
+awtp.cle.7 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "CLE 8001 HT") 
+awtp.cle.7$Mfg_location_line <- "CLE 8001 HT"
+
+awtp.cle.8 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "CLE 8002 HT") 
+awtp.cle.8$Mfg_location_line <- "CLE 8002 HT"
+
+awtp.cle.9 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "CLE 8003 HT") 
+awtp.cle.9$Mfg_location_line <- "CLE 8003 HT"
+
+#combine all cle into dataframe
+awtp.cle <- rbind.fill(awtp.cle.1, awtp.cle.2, awtp.cle.3, awtp.cle.4, awtp.cle.5, awtp.cle.6, awtp.cle.7, awtp.cle.8, awtp.cle.9)
+
+#Clear the workspace objects no longer needed
+rm(awtp.cle.1, awtp.cle.2, awtp.cle.3, awtp.cle.4, awtp.cle.5, awtp.cle.6, awtp.cle.7, awtp.cle.8, awtp.cle.9)
+
+
+#bring all BRB & BCC lines
+awtp.brb.1 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "BRB Machining") 
+awtp.brb.1$Mfg_location_line <- "BRB Machining" 
+
+awtp.brb.2 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "BRB Line 21") 
+awtp.brb.2$Mfg_location_line <- "BRB Line 21" 
+
+awtp.brb.3 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "BRB Line 23") 
+awtp.brb.3$Mfg_location_line <- "BRB Line 23"
+
+awtp.brb.4 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "BRB Line 31") 
+awtp.brb.4$Mfg_location_line <- "BRB Line 31"
+
+awtp.brb.5 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "BRB Line 32") 
+awtp.brb.5$Mfg_location_line <- "BRB Line 32"
+
+awtp.brb.6 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "BRB Line 33") 
+awtp.brb.6$Mfg_location_line <- "BRB Line 33"
+
+awtp.brb.7 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "BRB Line 34") 
+awtp.brb.7$Mfg_location_line <- "BRB Line 34"
+
+awtp.brb.8 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "BRB Line 35") 
+awtp.brb.8$Mfg_location_line <- "BRB Line 35"
+
+awtp.brb.9 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "BRB Line 37") 
+awtp.brb.9$Mfg_location_line <- "BRB Line 37"
+
+awtp.brb.10 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "BRB Line 42") 
+awtp.brb.10$Mfg_location_line <- "BRB Line 42"
+
+awtp.brb.11 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "BRB Line 43") 
+awtp.brb.11$Mfg_location_line <- "BRB Line 43"
+
+awtp.brb.12 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "BRB Line 44") 
+awtp.brb.12$Mfg_location_line <- "BRB Line 44"
+
+awtp.brb.13 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "BRB Line 45") 
+awtp.brb.13$Mfg_location_line <- "BRB Line 45"
+
+awtp.brb.14 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "BRB Line 46") 
+awtp.brb.14$Mfg_location_line <- "BRB Line 46"
+
+awtp.brb.15 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "BRB Finishing") 
+awtp.brb.15$Mfg_location_line <- "BRB Finishing"
+
+awtp.brb.16 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "BRB Dpt 54") 
+awtp.brb.16$Mfg_location_line <- "BRB Dpt 54"
+
+awtp.brb.17 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "BRB Megapolish 1") 
+awtp.brb.17$Mfg_location_line <- "BRB Megapolish 1"
+
+awtp.brb.18 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "BRB Megapolish 2") 
+awtp.brb.18$Mfg_location_line <- "BRB Megapolish 2"
+
+awtp.brb.19 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "BRB Durabright") 
+awtp.brb.19$Mfg_location_line <- "BRB Durabright"
+
+awtp.brb.20 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "BCC Casthouse") awtp.brb.20$Mfg_location_line <- "BCC Casthouse"
+
+
+#awtp.brb.all.cast. <- rbind.fill(awtp.brb.1, awtp.brb.2, awtp.brb.3, awtp.brb.4, awtp.brb.5, awtp.brb.6, awtp.brb.7, awtp.brb.8, awtp.brb.9, awtp.brb.10, awtp.brb.11, awtp.brb.12, awtp.brb.13, awtp.brb.14, awtp.brb.15, awtp.brb.16, awtp.brb.17, awtp.brb.18, awtp.brb.19, awtp.brb.20)
+
+#combine all brb & bcc into dataframe
+awtp.brb <- rbind.fill(awtp.brb.1, awtp.brb.2, awtp.brb.3, awtp.brb.4, awtp.brb.5, awtp.brb.6, awtp.brb.7, awtp.brb.8, awtp.brb.9, awtp.brb.10, awtp.brb.11, awtp.brb.12, awtp.brb.13, awtp.brb.14, awtp.brb.15, awtp.brb.16, awtp.brb.17, awtp.brb.18, awtp.brb.19, awtp.brb.20)
+
+#Clear the workspace objects no longer needed
+rm(awtp.brb.1, awtp.brb.2, awtp.brb.3, awtp.brb.4, awtp.brb.5, awtp.brb.6, awtp.brb.7, awtp.brb.8, awtp.brb.9, awtp.brb.10, awtp.brb.11, awtp.brb.12, awtp.brb.13, awtp.brb.14, awtp.brb.15, awtp.brb.16, awtp.brb.17, awtp.brb.18, awtp.brb.19, awtp.brb.20)
+
+
+##bring in all AWPJ lines
+awtp.awpj.1 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPJ Machining") 
+awtp.awpj.1$Mfg_location_line <- "AWPJ Machining"
+
+awtp.awpj.2 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPJ Line 1") 
+awtp.awpj.2$Mfg_location_line <- "AWPJ Line 1"
+
+awtp.awpj.3 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPJ Line 2") 
+awtp.awpj.3$Mfg_location_line <- "AWPJ Line 2"
+
+awtp.awpj.4 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPJ Line 3") 
+awtp.awpj.4$Mfg_location_line <- "AWPJ Line 3"
+
+awtp.awpj.5 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPJ Finishing") 
+awtp.awpj.5$Mfg_location_line <- "AWPJ Finishing"
+
+awtp.awpj.6 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPJ Brush") 
+awtp.awpj.6$Mfg_location_line <- "AWPJ Brush"
+
+awtp.awpj.7 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPJ Polish") 
+awtp.awpj.7$Mfg_location_line <- "AWPJ Polish"
+
+#combine all AWPJ into dataframe
+awtp.awpj <- rbind.fill(awtp.awpj.1, awtp.awpj.2, awtp.awpj.3, awtp.awpj.4, awtp.awpj.5, awtp.awpj.6, awtp.awpj.7)
+
+#Clear the workspace objects no longer needed
+rm(awtp.awpj.1, awtp.awpj.2, awtp.awpj.3, awtp.awpj.4, awtp.awpj.5, awtp.awpj.6, awtp.awpj.7)
+
+
+
+#bring in all AWPS lines
+awtp.awps.1 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPS Machining") 
+awtp.awps.1$Mfg_location_line <- "AWPS Machining"
+
+awtp.awps.2 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPS Line 1") 
+awtp.awps.2$Mfg_location_line <- "AWPS Line 1"
+
+awtp.awps.3 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPS Line 2") 
+awtp.awps.3$Mfg_location_line <- "AWPS Line 2"
+
+awtp.awps.4 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPS Finishing") 
+awtp.awps.4$Mfg_location_line <- "AWPS Finishing"
+
+awtp.awps.5 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPS Brush") 
+awtp.awps.5$Mfg_location_line <- "AWPS Brush"
+
+awtp.awps.6 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPS Polish") 
+awtp.awps.6$Mfg_location_line <- "AWPS Polish"
+
+# combine all AWPS into dataframe
+awtp.awps <- rbind.fill(awtp.awps.1, awtp.awps.2, awtp.awps.3, awtp.awps.4, awtp.awps.5, awtp.awps.6)
+
+# Clear the workspace objects no longer needed
+rm(awtp.awps.1, awtp.awps.2, awtp.awps.3, awtp.awps.4, awtp.awps.5, awtp.awps.6)
+
+
+# bring in all AWPE lines
+awtp.awpe.1 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPE Machining") 
+awtp.awpe.1$Mfg_location_line <- "AWPE Machining"
+
+awtp.awpe.2 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPE Forging") 
+awtp.awpe.2$Mfg_location_line <- "AWPE Forging"
+
+awtp.awpe.3 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPE Mini Line") 
+awtp.awpe.3$Mfg_location_line <- "AWPE Mini Line"
+
+awtp.awpe.4 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPE Conventional Main Line") 
+awtp.awpe.4$Mfg_location_line <- "AWPE Conventional Main Line"
+
+awtp.awpe.5 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPE Super Single Line") 
+awtp.awpe.5$Mfg_location_line <- "AWPE Super Single Line"
+
+awtp.awpe.6 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPE IMT Line") 
+awtp.awpe.6$Mfg_location_line <- "AWPE IMT Line"
+
+awtp.awpe.7 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPE CD Line") 
+awtp.awpe.7$Mfg_location_line <- "AWPE CD Line"
+
+awtp.awpe.8 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPE CD Megaline") 
+awtp.awpe.8$Mfg_location_line <- "AWPE CD Megaline"
+
+awtp.awpe.9 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPE ULW Line") 
+awtp.awpe.9$Mfg_location_line <- "AWPE ULW Line"
+
+awtp.awpe.10 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPE Finishing") 
+awtp.awpe.10$Mfg_location_line <- "AWPE Finishing"
+
+awtp.awpe.11 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPE AB Polish") 
+awtp.awpe.11$Mfg_location_line <- "AWPE AB Polish"
+
+awtp.awpe.12 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPE AB Satin") 
+awtp.awpe.12$Mfg_location_line <- "AWPE AB Satin"
+
+awtp.awpe.13 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPE CD Polish") 
+awtp.awpe.13$Mfg_location_line <- "AWPE CD Polish"
+
+awtp.awpe.14 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPE CD Satin") 
+awtp.awpe.14$Mfg_location_line <- "AWPE CD Satin"
+
+awtp.awpe.15 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPE DB2 Polish") 
+awtp.awpe.15$Mfg_location_line <- "AWPE DB2 Polish"
+
+awtp.awpe.16 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPE Durabright") 
+awtp.awpe.16$Mfg_location_line <- "AWPE Durabright"
+
+awtp.awpe.17 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPE DB Line 1") 
+awtp.awpe.17$Mfg_location_line <- "AWPE DB Line 1"
+
+awtp.awpe.18 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPE DB Line 2") 
+awtp.awpe.18$Mfg_location_line <- "AWPE DB Line 2"
+
+# combine all brb & bcc into dataframe
+awtp.awpe <- rbind.fill(awtp.awpe.1, awtp.awpe.2, awtp.awpe.3, awtp.awpe.4, awtp.awpe.5, awtp.awpe.6, awtp.awpe.7, awtp.awpe.8, awtp.awpe.9, awtp.awpe.10, awtp.awpe.11, awtp.awpe.12, awtp.awpe.13, awtp.awpe.14, awtp.awpe.15, awtp.awpe.16, awtp.awpe.17, awtp.awpe.18)
+
+# Clear the workspace objects no longer needed
+rm(awtp.awpe.1, awtp.awpe.2, awtp.awpe.3, awtp.awpe.4, awtp.awpe.5, awtp.awpe.6, awtp.awpe.7, awtp.awpe.8, awtp.awpe.9, awtp.awpe.10, awtp.awpe.11, awtp.awpe.12, awtp.awpe.13, awtp.awpe.14, awtp.awpe.15, awtp.awpe.16, awtp.awpe.17, awtp.awpe.18)
+
+
+# bring in all AWPM lines
+awtp.awpm.1 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPM Casthouse") 
+awtp.awpm.1$Mfg_location_line <- "AWPM Casthouse"
+
+awtp.awpm.2 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPM Machining") 
+awtp.awpm.2$Mfg_location_line <- "AWPM Machining"
+
+awtp.awpm.3 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPM Forging") 
+awtp.awpm.3$Mfg_location_line <- "AWPM Forging"
+
+awtp.awpm.4 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPM Line 1") 
+awtp.awpm.4$Mfg_location_line <- "AWPM Line 1"
+
+awtp.awpm.5 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPM Line 2") 
+awtp.awpm.5$Mfg_location_line <- "AWPM Line 2"
+
+awtp.awpm.6 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPM Line 3") 
+awtp.awpm.6$Mfg_location_line <- "AWPM Line 3"
+
+awtp.awpm.7 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPM Line 4") 
+awtp.awpm.7$Mfg_location_line <- "AWPM Line 4"
+
+awtp.awpm.8 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPM Line 5") 
+awtp.awpm.8$Mfg_location_line <- "AWPM Line 5"
+
+awtp.awpm.9 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPM Line 6") 
+awtp.awpm.9$Mfg_location_line <- "AWPM Line 6"
+
+awtp.awpm.10 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPM Line 7") 
+awtp.awpm.10$Mfg_location_line <- "AWPM Line 7"
+
+awtp.awpm.11 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPM Line 8") 
+awtp.awpm.11$Mfg_location_line <- "AWPM Line 8"
+
+awtp.awpm.12 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPM Finishing") 
+awtp.awpm.12$Mfg_location_line <- "AWPM Finishing"
+
+awtp.awpm.13 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPM Cell A") 
+awtp.awpm.13$Mfg_location_line <- "AWPM Cell A"
+
+awtp.awpm.14 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPM Cell B") 
+awtp.awpm.14$Mfg_location_line <- "AWPM Cell B"
+
+awtp.awpm.15 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPM Cell C") 
+awtp.awpm.15$Mfg_location_line <- "AWPM Cell C"
+
+awtp.awpm.16 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPM Mega Polish 1") 
+awtp.awpm.16$Mfg_location_line <- "AWPM Mega Polish 1"
+
+awtp.awpm.17 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPM Mega Polish 2") 
+awtp.awpm.17$Mfg_location_line <- "AWPM Mega Polish 2"
+
+awtp.awpm.18 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWPM Durabright") 
+awtp.awpm.18$Mfg_location_line <- "AWPM Durabright"
+
+
+#Adding AWTP level for actual/plan comparison (AvP)
+awtp.awtp.1 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWTP Casthouse") 
+awtp.awtp.1$Mfg_location_line <- "AWTP Casthouse"
+
+awtp.awtp.2 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWTP Forging") 
+awtp.awtp.2$Mfg_location_line <- "AWTP Forging"
+
+awtp.awtp.3 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWTP Machining") 
+awtp.awtp.3$Mfg_location_line <- "AWTP Machining"
+
+awtp.awtp.4 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWTP Finishing") 
+awtp.awtp.4$Mfg_location_line <- "AWTP Finishing"
+
+awtp.awtp.5 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Lagging.xlsm", sheet = "AWTP Durabright") 
+awtp.awtp.5$Mfg_location_line <- "AWTP Durabright"
+
+
+# combine all AWPM into dataframe
+awtp.awpm <- rbind.fill(awtp.awpm.1, awtp.awpm.2, awtp.awpm.3, awtp.awpm.4, awtp.awpm.5, awtp.awpm.6, awtp.awpm.7, awtp.awpm.8, awtp.awpm.9, awtp.awpm.10, awtp.awpm.11, awtp.awpm.12, awtp.awpm.13, awtp.awpm.14, awtp.awpm.15, awtp.awpm.16, awtp.awpm.17, awtp.awpm.18, awtp.awtp.1, awtp.awtp.2, awtp.awtp.3, awtp.awtp.4, awtp.awtp.5)
+
+# Clear the workspace objects no longer needed
+rm(awtp.awpm.1, awtp.awpm.2, awtp.awpm.3, awtp.awpm.4, awtp.awpm.5, awtp.awpm.6, awtp.awpm.7, awtp.awpm.8, awtp.awpm.9, awtp.awpm.10, awtp.awpm.11, awtp.awpm.12, awtp.awpm.13, awtp.awpm.14, awtp.awpm.15, awtp.awpm.16, awtp.awpm.17, awtp.awpm.18, awtp.awtp.1, awtp.awtp.2, awtp.awtp.3, awtp.awtp.4, awtp.awtp.5)
+
+
+# now combine all dem leftover dataframes into a monsterframe
+awtp.lag.2018 <- rbind.fill(awtp.awpe, awtp.brb, awtp.awpj, awtp.awps, awtp.awpm, awtp.cle )
+
+#Clear the workspace objects no longer needed
+rm(awtp.awpe, awtp.brb, awtp.awpj, awtp.awps, awtp.awpm, awtp.cle)
+
+#add year label
+awtp.lag.2018$year <- "2018"
+
+###############################################################################################
+
+##Change the case to lower of the columns..
+
+names(awtp.lag.2018) <- tolower(names(awtp.lag.2018))
+
+
+####################################################################################################
+
+#Cascadia 2018 Leading
+
+awtp.cle.1 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "CLE Forging") 
+awtp.cle.1$Mfg_location_line <- "CLE Forging" 
+
+awtp.cle.2 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "CLE Heat Treat") 
+awtp.cle.2$Mfg_location_line <- "CLE HT"
+
+awtp.cle.3 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "CLE X Plant Forging") 
+awtp.cle.3$Mfg_location_line <- "CLE X Plant Forging"
+
+awtp.cle.4 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "CLE Y Plant Forging") 
+awtp.cle.4$Mfg_location_line <- "CLE Y Plant Forging"
+
+awtp.cle.5 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "CLE 8002 Forging") 
+awtp.cle.5$Mfg_location_line <- "CLE 8002 Forging"
+
+awtp.cle.6 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "CLE 8003 Forging") 
+awtp.cle.6$Mfg_location_line <- "CLE 8003 Forging"
+
+#awtp.cle.7 <-  readWorkbook("Z:/Waterfall1/2018/CLE/AWTP - 2018 Cascadia Leading.xlsx", sheet = "CLE 8001 HT") 
+#awtp.cle.7$Mfg_location_line <- "CLE 8001 HT"
+
+awtp.cle.8 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "CLE 8002 HT") 
+awtp.cle.8$Mfg_location_line <- "CLE 8002 HT"
+
+awtp.cle.9 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "CLE 8003 HT") 
+awtp.cle.9$Mfg_location_line <- "CLE 8003 HT"
+
+#combine all cle into dataframe
+awtp.cle <- rbind.fill(awtp.cle.1, awtp.cle.2, awtp.cle.3, awtp.cle.4, awtp.cle.5, awtp.cle.6, awtp.cle.8, awtp.cle.9)
+
+#Clear the workspace objects no longer needed
+rm(awtp.cle.1, awtp.cle.2, awtp.cle.3, awtp.cle.4, awtp.cle.5, awtp.cle.6, awtp.cle.8, awtp.cle.9)
+
+
+#bring in all BRB & BCC lines
+awtp.brb.1 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "BRB Machining") 
+awtp.brb.1$Mfg_location_line <- "BRB Machining" 
+
+awtp.brb.2 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "BRB Line 21") 
+awtp.brb.2$Mfg_location_line <- "BRB Line 21" 
+
+awtp.brb.3 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "BRB Line 23") 
+awtp.brb.3$Mfg_location_line <- "BRB Line 23"
+
+awtp.brb.4 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "BRB Line 31") 
+awtp.brb.4$Mfg_location_line <- "BRB Line 31"
+
+awtp.brb.5 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "BRB Line 32") 
+awtp.brb.5$Mfg_location_line <- "BRB Line 32"
+
+awtp.brb.6 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "BRB Line 33") 
+awtp.brb.6$Mfg_location_line <- "BRB Line 33"
+
+awtp.brb.7 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "BRB Line 34") 
+awtp.brb.7$Mfg_location_line <- "BRB Line 34"
+
+awtp.brb.8 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "BRB Line 35") 
+awtp.brb.8$Mfg_location_line <- "BRB Line 35"
+
+awtp.brb.9 <-  readWorkbook("Z:/Waterfall1/2018//AWTP - 2018 Cascadia Leading.xlsm", sheet = "BRB Line 37") 
+awtp.brb.9$Mfg_location_line <- "BRB Line 37"
+
+awtp.brb.10 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "BRB Line 42") 
+awtp.brb.10$Mfg_location_line <- "BRB Line 42"
+
+awtp.brb.11 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "BRB Line 43") 
+awtp.brb.11$Mfg_location_line <- "BRB Line 43"
+
+awtp.brb.12 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "BRB Line 44") 
+awtp.brb.12$Mfg_location_line <- "BRB Line 44"
+
+awtp.brb.13 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "BRB Line 45") 
+awtp.brb.13$Mfg_location_line <- "BRB Line 45"
+
+awtp.brb.14 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "BRB Line 46") 
+awtp.brb.14$Mfg_location_line <- "BRB Line 46"
+
+awtp.brb.15 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "BRB Finishing") 
+awtp.brb.15$Mfg_location_line <- "BRB Finishing"
+
+awtp.brb.16 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "BRB Dpt 54") 
+awtp.brb.16$Mfg_location_line <- "BRB Dpt 54"
+
+awtp.brb.17 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "BRB Megapolish 1") 
+awtp.brb.17$Mfg_location_line <- "BRB Megapolish 1"
+
+awtp.brb.18 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "BRB Megapolish 2") 
+awtp.brb.18$Mfg_location_line <- "BRB Megapolish 2"
+
+awtp.brb.19 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "BRB Durabright") 
+awtp.brb.19$Mfg_location_line <- "BRB Durabright"
+
+awtp.brb.20 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "BCC Casthouse") 
+awtp.brb.20$Mfg_location_line <- "BCC Casthouse"
+
+#combine all brb & bcc into dataframe
+awtp.brb <- rbind.fill(awtp.brb.1, awtp.brb.2, awtp.brb.3, awtp.brb.4, awtp.brb.5, awtp.brb.6, awtp.brb.7, awtp.brb.8, awtp.brb.9, awtp.brb.10, awtp.brb.11, awtp.brb.12, awtp.brb.13, awtp.brb.14, awtp.brb.15, awtp.brb.16, awtp.brb.17, awtp.brb.18, awtp.brb.19, awtp.brb.20)
+
+#Clear the workspace objects no longer needed
+rm(awtp.brb.1, awtp.brb.2, awtp.brb.3, awtp.brb.4, awtp.brb.5, awtp.brb.6, awtp.brb.7, awtp.brb.8, awtp.brb.9, awtp.brb.10, awtp.brb.11, awtp.brb.12, awtp.brb.13, awtp.brb.14, awtp.brb.15, awtp.brb.16, awtp.brb.17, awtp.brb.18, awtp.brb.19, awtp.brb.20)
+
+
+#bring in all AWPJ lines
+awtp.awpj.1 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPJ Machining") 
+awtp.awpj.1$Mfg_location_line <- "AWPJ Machining"
+
+awtp.awpj.2 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPJ Line 1") 
+awtp.awpj.2$Mfg_location_line <- "AWPJ Line 1"
+
+awtp.awpj.3 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPJ Line 2") 
+awtp.awpj.3$Mfg_location_line <- "AWPJ Line 2"
+
+awtp.awpj.4 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPJ Line 3") 
+awtp.awpj.4$Mfg_location_line <- "AWPJ Line 3"
+
+awtp.awpj.5 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPJ Finishing") 
+awtp.awpj.5$Mfg_location_line <- "AWPJ Finishing"
+
+awtp.awpj.6 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPJ Brush") 
+awtp.awpj.6$Mfg_location_line <- "AWPJ Brush"
+
+awtp.awpj.7 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPJ Polish") 
+awtp.awpj.7$Mfg_location_line <- "AWPJ Polish"
+
+#combine all AWPJ into dataframe
+awtp.awpj <- rbind.fill(awtp.awpj.1, awtp.awpj.2, awtp.awpj.3, awtp.awpj.4, awtp.awpj.5, awtp.awpj.6, awtp.awpj.7)
+
+#Clear the workspace objects no longer needed
+rm(awtp.awpj.1, awtp.awpj.2, awtp.awpj.3, awtp.awpj.4, awtp.awpj.5, awtp.awpj.6, awtp.awpj.7)
+
+
+#bring in all AWPS lines
+awtp.awps.1 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPS Machining") 
+awtp.awps.1$Mfg_location_line <- "AWPS Machining"
+
+awtp.awps.2 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPS Line 1") 
+awtp.awps.2$Mfg_location_line <- "AWPS Line 1"
+
+awtp.awps.3 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPS Line 2") 
+awtp.awps.3$Mfg_location_line <- "AWPS Line 2"
+
+awtp.awps.4 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPS Finishing") 
+awtp.awps.4$Mfg_location_line <- "AWPS Finishing"
+
+awtp.awps.5 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPS Brush") 
+awtp.awps.5$Mfg_location_line <- "AWPS Brush"
+
+awtp.awps.6 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPS Polish") 
+awtp.awps.6$Mfg_location_line <- "AWPS Polish"
+
+#combine all AWPS into dataframe
+awtp.awps <- rbind.fill(awtp.awps.1, awtp.awps.2, awtp.awps.3, awtp.awps.4, awtp.awps.5, awtp.awps.6)
+
+#Clear the workspace objects no longer needed
+rm(awtp.awps.1, awtp.awps.2, awtp.awps.3, awtp.awps.4, awtp.awps.5, awtp.awps.6)
+
+
+#bring in all AWPE lines
+awtp.awpe.1 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPE Machining") 
+awtp.awpe.1$Mfg_location_line <- "AWPE Machining"
+
+awtp.awpe.2 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPE Forging") 
+awtp.awpe.2$Mfg_location_line <- "AWPE Forging"
+
+awtp.awpe.3 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPE Mini Line") 
+awtp.awpe.3$Mfg_location_line <- "AWPE Mini Line"
+
+awtp.awpe.4 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPE Conventional Main Line") 
+awtp.awpe.4$Mfg_location_line <- "AWPE Conventional Main Line"
+
+awtp.awpe.5 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPE Super Single Line") 
+awtp.awpe.5$Mfg_location_line <- "AWPE Super Single Line"
+
+awtp.awpe.6 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPE IMT Line") 
+awtp.awpe.6$Mfg_location_line <- "AWPE IMT Line"
+
+awtp.awpe.7 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPE CD Line") 
+awtp.awpe.7$Mfg_location_line <- "AWPE CD Line"
+
+awtp.awpe.8 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPE CD Megaline") 
+awtp.awpe.8$Mfg_location_line <- "AWPE CD Megaline"
+
+awtp.awpe.9 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPE ULW Line") 
+awtp.awpe.9$Mfg_location_line <- "AWPE ULW Line"
+
+awtp.awpe.10 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPE Finishing") 
+awtp.awpe.10$Mfg_location_line <- "AWPE Finishing"
+
+awtp.awpe.11 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPE AB Polish") 
+awtp.awpe.11$Mfg_location_line <- "AWPE AB Polish"
+
+awtp.awpe.12 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPE AB Satin") 
+awtp.awpe.12$Mfg_location_line <- "AWPE AB Satin"
+
+awtp.awpe.13 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPE CD Polish") 
+awtp.awpe.13$Mfg_location_line <- "AWPE CD Polish"
+
+awtp.awpe.14 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPE CD Satin") 
+awtp.awpe.14$Mfg_location_line <- "AWPE CD Satin"
+
+awtp.awpe.15 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPE DB2 Polish") 
+awtp.awpe.15$Mfg_location_line <- "AWPE DB2 Polish"
+
+awtp.awpe.16 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPE Durabright") 
+awtp.awpe.16$Mfg_location_line <- "AWPE Durabright"
+
+awtp.awpe.17 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPE DB Line 1") 
+awtp.awpe.17$Mfg_location_line <- "AWPE DB Line 1"
+
+awtp.awpe.18 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPE DB Line 2") 
+awtp.awpe.18$Mfg_location_line <- "AWPE DB Line 2"
+
+#combine all brb & bcc into dataframe
+awtp.awpe <- rbind.fill(awtp.awpe.1, awtp.awpe.2, awtp.awpe.3, awtp.awpe.4, awtp.awpe.5, awtp.awpe.6, awtp.awpe.7, awtp.awpe.8, awtp.awpe.9, awtp.awpe.10, awtp.awpe.11, awtp.awpe.12, awtp.awpe.13, awtp.awpe.14, awtp.awpe.15, awtp.awpe.16, awtp.awpe.17, awtp.awpe.18)
+
+#Clear the workspace objects no longer needed
+rm(awtp.awpe.1, awtp.awpe.2, awtp.awpe.3, awtp.awpe.4, awtp.awpe.5, awtp.awpe.6, awtp.awpe.7, awtp.awpe.8, awtp.awpe.9, awtp.awpe.10, awtp.awpe.11, awtp.awpe.12, awtp.awpe.13, awtp.awpe.14, awtp.awpe.15, awtp.awpe.16, awtp.awpe.17, awtp.awpe.18)
+
+
+#bring in all AWPM lines
+awtp.awpm.1 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPM Casthouse") 
+awtp.awpm.1$Mfg_location_line <- "AWPM Casthouse"
+
+awtp.awpm.2 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPM Machining") 
+awtp.awpm.2$Mfg_location_line <- "AWPM Machining"
+
+awtp.awpm.3 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPM Forging") 
+awtp.awpm.3$Mfg_location_line <- "AWPM Forging"
+
+awtp.awpm.4 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPM Line 1") 
+awtp.awpm.4$Mfg_location_line <- "AWPM Line 1"
+
+awtp.awpm.5 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPM Line 2") 
+awtp.awpm.5$Mfg_location_line <- "AWPM Line 2"
+
+awtp.awpm.6 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPM Line 3") 
+awtp.awpm.6$Mfg_location_line <- "AWPM Line 3"
+
+awtp.awpm.7 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPM Line 4") 
+awtp.awpm.7$Mfg_location_line <- "AWPM Line 4"
+
+awtp.awpm.8 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPM Line 5") 
+awtp.awpm.8$Mfg_location_line <- "AWPM Line 5"
+
+awtp.awpm.9 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPM Line 6") 
+awtp.awpm.9$Mfg_location_line <- "AWPM Line 6"
+
+awtp.awpm.10 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPM Line 7") 
+awtp.awpm.10$Mfg_location_line <- "AWPM Line 7"
+
+awtp.awpm.11 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPM Line 8") 
+awtp.awpm.11$Mfg_location_line <- "AWPM Line 8"
+
+awtp.awpm.12 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPM Finishing") 
+awtp.awpm.12$Mfg_location_line <- "AWPM Finishing"
+
+awtp.awpm.13 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPM Cell A") 
+awtp.awpm.13$Mfg_location_line <- "AWPM Cell A"
+
+awtp.awpm.14 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPM Cell B") 
+awtp.awpm.14$Mfg_location_line <- "AWPM Cell B"
+
+awtp.awpm.15 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPM Cell C") 
+awtp.awpm.15$Mfg_location_line <- "AWPM Cell C"
+
+awtp.awpm.16 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPM Mega Polish 1") 
+awtp.awpm.16$Mfg_location_line <- "AWPM Mega Polish 1"
+
+awtp.awpm.17 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPM Mega Polish 2") 
+awtp.awpm.17$Mfg_location_line <- "AWPM Mega Polish 2"
+
+awtp.awpm.18 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWPM Durabright") 
+awtp.awpm.18$Mfg_location_line <- "AWPM Durabright"
+
+
+#bring in all AWPS lines
+awtp.awtp.1 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWTP Casthouse") 
+awtp.awtp.1$Mfg_location_line <- "AWTP Casthouse"
+
+awtp.awtp.2 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWTP Forging") 
+awtp.awtp.2$Mfg_location_line <- "AWTP Forging"
+
+awtp.awtp.3 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWTP Machining") 
+awtp.awtp.3$Mfg_location_line <- "AWTP Machining"
+
+awtp.awtp.4 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWTP Finishing") 
+awtp.awtp.4$Mfg_location_line <- "AWTP Finishing"
+
+awtp.awtp.5 <-  readWorkbook("Z:/Waterfall1/2018/AWTP - 2018 Cascadia Leading.xlsm", sheet = "AWTP Durabright") 
+awtp.awtp.5$Mfg_location_line <- "AWTP Durabright"
+
+# combine all AWPM into dataframe
+awtp.awpm <- rbind.fill(awtp.awpm.1, awtp.awpm.2, awtp.awpm.3, awtp.awpm.4, awtp.awpm.5, awtp.awpm.6, awtp.awpm.7, awtp.awpm.8, awtp.awpm.9, awtp.awpm.10, awtp.awpm.11, awtp.awpm.12, awtp.awpm.13, awtp.awpm.14, awtp.awpm.15, awtp.awpm.16, awtp.awpm.17, awtp.awpm.18, awtp.awtp.1, awtp.awtp.2, awtp.awtp.3, awtp.awtp.4, awtp.awtp.5)
+
+# Clear the workspace objects no longer needed
+rm(awtp.awpm.1, awtp.awpm.2, awtp.awpm.3, awtp.awpm.4, awtp.awpm.5, awtp.awpm.6, awtp.awpm.7, awtp.awpm.8, awtp.awpm.9, awtp.awpm.10, awtp.awpm.11, awtp.awpm.12, awtp.awpm.13, awtp.awpm.14, awtp.awpm.15, awtp.awpm.16, awtp.awpm.17, awtp.awpm.18, awtp.awtp.1, awtp.awtp.2, awtp.awtp.3, awtp.awtp.4, awtp.awtp.5)
+
+# now combine all dem leftover dataframes into a monsterframe
+awtp.lead.2018 <- rbind.fill(awtp.awpe, awtp.brb, awtp.awpj, awtp.awps, awtp.awpm, awtp.cle )
+
+#Clear the workspace objects no longer needed
+rm(awtp.awpe, awtp.brb, awtp.awpj, awtp.awps, awtp.awpm, awtp.cle)
+
+#add year label
+awtp.lead.2018$year <- "2018"
+
+names(awtp.lead.2018) <- tolower(names(awtp.lead.2018))
+
+
+
+```
