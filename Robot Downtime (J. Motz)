@@ -1,0 +1,261 @@
+---
+title: "Rowbots Dowahntyme "
+author: "cpj"
+date: "March 14, 2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+Input:  NOAADC-P16SQC82\\VALCOMMON\VorneData_Alcoa
+Ouput: 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(RODBC)
+library(sqldf)
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(lubridate)
+library(scales)
+library(ggthemes)
+
+```
+
+```{r vorne sql data}
+
+
+
+#Clear the workspace objects
+#rm(list = ls())
+
+# 
+dbconnection <- odbcDriverConnect("Driver={ODBC Driver 13 for SQL Server};
+                                   Server=NOAADC-P16SQC82\\VALCOMMON;
+                                   DATABASE=<Sea Secrets>;
+                                   UID=<Sea Secrets>;
+                                   PWD=<Sea Secrets>")
+
+
+query <- 
+
+"   
+select   timeline_stream_v2.deviceKey
+    		,timeline_stream_v2.start_time_day
+    		,timeline_stream_v2.reason_text
+    		,timeline_stream_v2.reason as reason_code
+    		,dateadd(month, datediff(month, 0, timeline_stream_v2.start_time_day), 0) as month_date
+    		,datepart(MM,timeline_stream_v2.start_time_day) as mnth
+    		,datepart(YY,timeline_stream_v2.start_time_day) as yr
+    		,(timeline_stream_v2.event_number)
+    		,sum(timeline_stream_v2.duration) as event_duration
+    		--,oee.event_comment.[text]
+from  oee.event_comment inner join
+    		timeline_stream_v2 ON oee.event_comment.deviceKey = timeline_stream_v2.deviceKey 
+    		and oee.event_comment.eventNumber = timeline_stream_v2.event_number
+where timeline_stream_v2.deviceKey in ('8002', '8003', 'X-Plant', 'Y-Plant')
+    	  and (reason_text like '%R[0-9]%' 
+      		or reason_text like '%R[s][0-9]%' 
+      		or reason_text like '%Rbt%' 
+      		or reason_text like '%Robot%')
+            and (timeline_stream_v2.start_time_day >= getdate() - 365)
+group by event_number
+    		,timeline_stream_v2.deviceKey
+    		,timeline_stream_v2.start_time_day
+    		,timeline_stream_v2.reason_text
+    		,timeline_stream_v2.reason
+    		,dateadd(month, datediff(month, 0, timeline_stream_v2.start_time_day), 0)
+    		,datepart(MM,timeline_stream_v2.start_time_day)
+    		,datepart(YYYY,timeline_stream_v2.start_time_day)
+
+"
+
+# put the query result into a table, or a tibble?
+sql.dat <- sqlQuery(channel = dbconnection, query = query)
+
+# copy the sql data into a different data frame so you don't have to keep hitting sql to get the raw data
+rbt.dat <- sql.dat
+
+# read the robot master file to get context information
+awtp.rbt.mstr <- read.csv("Z:/KCSubsite/awtp.rbt.mstr.csv")
+
+#merge the data with the robot master file to add context
+
+rbt.dat <- merge(rbt.dat, awtp.rbt.mstr, all.x = TRUE, by = c("deviceKey", "reason_code"))
+
+rbt.dat.sum <- sqldf("select deviceKey
+                            , desc
+                            , month_date
+                            , count([event_number]) as count
+                            , sum([event_duration]) as duration
+                            , avg([event_duration]) as avgduration
+                      from [rbt.dat]
+                      group by deviceKey, asset, step, month_date")
+
+ggplot(data=rbt.dat.sum, aes(x = month_date, y = count)) +
+  facet_wrap(~deviceKey + desc) +
+  geom_bar(stat = "identity", fill = "steelblue")  +
+  scale_y_continuous("# of events")
+
+ggplot(data=rbt.dat.sum, aes(x = month_date, y = duration)) +
+  facet_wrap(~deviceKey + desc) +
+  geom_bar(stat = "identity", fill = "steelblue")  +
+  scale_y_continuous("duration")
+
+ggplot(data=rbt.dat.sum, aes(x = month_date, y = avgduration)) +
+  facet_wrap(~deviceKey + desc) +
+  geom_bar(stat = "identity", fill = "steelblue")  +
+  scale_y_continuous("avgduration")
+
+
+
+rbt.dat.sum.h <- sqldf("select deviceKey
+                            , desc
+                            , month_date
+                            , count([event_number]) as count
+                            , sum([event_duration]) as duration
+                            , avg([event_duration]) as avgduration
+                      from [rbt.dat]
+                            group by deviceKey, month_date, desc")
+
+ggplot(data=rbt.dat.sum.h, aes(x = month_date, y = count)) +
+  facet_wrap(~deviceKey + desc) +
+  geom_bar(stat = "identity", fill = "steelblue")  +
+  scale_y_continuous("# of events") +
+theme(strip.text.x = element_text(size = 8))
+
+ggplot(data=rbt.dat.sum.h, aes(x = month_date, y = duration)) +
+  facet_wrap(~deviceKey + desc) +
+  geom_bar(stat = "identity", fill = "steelblue")  +
+  scale_y_continuous("duration") +
+theme(strip.text.x = element_text(size = 8))
+
+ggplot(data=rbt.dat.sum.h, aes(x = month_date, y = avgduration)) +
+  facet_wrap(~deviceKey + desc) +
+  geom_bar(stat = "identity", fill = "steelblue")  +
+  scale_y_continuous("avgduration") +
+theme(strip.text.x = element_text(size = 8))
+
+
+```
+
+
+```{r}
+
+
+
+
+#Clear the workspace objects
+#rm(list = ls())
+
+# 
+dbconnection <- odbcDriverConnect("Driver={ODBC Driver 13 for SQL Server};
+                                   Server=NOAADC-P16SQC82\\VALCOMMON;
+                                   DATABASE=<Sea Secrets>;
+                                   UID=<Sea Secrets>;
+                                   PWD=<Sea Secrets>")
+
+
+query <- 
+
+"   
+select   timeline_stream_v2.deviceKey
+    		,timeline_stream_v2.start_time_day
+    		,timeline_stream_v2.reason_text
+    		,timeline_stream_v2.reason as reason_code
+    		,dateadd(month, datediff(month, 0, timeline_stream_v2.start_time_day), 0) as month_date
+    		,datepart(MM,timeline_stream_v2.start_time_day) as mnth
+    		,datepart(YY,timeline_stream_v2.start_time_day) as yr
+    		,(timeline_stream_v2.event_number)
+    		,sum(timeline_stream_v2.duration) as event_duration
+    		--,oee.event_comment.[text]
+from  oee.event_comment inner join
+    		timeline_stream_v2 ON oee.event_comment.deviceKey = timeline_stream_v2.deviceKey 
+    		and oee.event_comment.eventNumber = timeline_stream_v2.event_number
+where timeline_stream_v2.deviceKey in ('8002', '8003', 'X-Plant', 'Y-Plant')
+    	  and (reason_text like '%R[0-9]%' 
+      		or reason_text like '%R[s][0-9]%' 
+      		or reason_text like '%Rbt%' 
+      		or reason_text like '%Robot%')
+            and (timeline_stream_v2.start_time_day >= getdate() - 106 and                   timeline_stream_v2.start_time_day <= getdate() - 16)
+group by event_number
+    		,timeline_stream_v2.deviceKey
+    		,timeline_stream_v2.start_time_day
+    		,timeline_stream_v2.reason_text
+    		,timeline_stream_v2.reason
+    		,dateadd(month, datediff(month, 0, timeline_stream_v2.start_time_day), 0)
+    		,datepart(MM,timeline_stream_v2.start_time_day)
+    		,datepart(YYYY,timeline_stream_v2.start_time_day)
+
+"
+
+# put the query result into a table, or a tibble?
+sql.dat <- sqlQuery(channel = dbconnection, query = query)
+
+# copy the sql data into a different data frame so you don't have to keep hitting sql to get the raw data
+rbt.dat <- sql.dat
+
+# read the robot master file to get context information
+awtp.rbt.mstr <- read.csv("Z:/KCSubsite/awtp.rbt.mstr.csv")
+
+#merge the data with the robot master file to add context
+
+rbt.dat <- merge(rbt.dat, awtp.rbt.mstr, all.x = TRUE, by = c("deviceKey", "reason_code"))
+
+# rbt.dat.sum <- sqldf("select deviceKey
+#                             , desc
+#                             , month_date
+#                             , count([event_number]) as count
+#                             , sum([event_duration]) as duration
+#                             , avg([event_duration]) as avgduration
+#                       from [rbt.dat]
+#                       group by deviceKey, asset, step, month_date")
+# 
+# ggplot(data=rbt.dat.sum, aes(x = month_date, y = count)) +
+#   facet_wrap(~deviceKey + desc) +
+#   geom_bar(stat = "identity", fill = "steelblue")  +
+#   scale_y_continuous("# of events")
+# 
+# ggplot(data=rbt.dat.sum, aes(x = month_date, y = duration)) +
+#   facet_wrap(~deviceKey + desc) +
+#   geom_bar(stat = "identity", fill = "steelblue")  +
+#   scale_y_continuous("duration")
+# 
+# ggplot(data=rbt.dat.sum, aes(x = month_date, y = avgduration)) +
+#   facet_wrap(~deviceKey + desc) +
+#   geom_bar(stat = "identity", fill = "steelblue")  +
+#   scale_y_continuous("avgduration")
+
+
+
+rbt.dat.sum.h <- sqldf("select deviceKey
+                            , desc
+                            , month_date
+                            , count([event_number]) as count
+                            , sum([event_duration]) as duration
+                            , avg([event_duration]) as avgduration
+                      from [rbt.dat]
+                            group by deviceKey, month_date, desc")
+
+ggplot(data=rbt.dat.sum.h, aes(x = month_date, y = count)) +
+  facet_wrap(~deviceKey + desc) +
+  geom_bar(stat = "identity", fill = "steelblue")  +
+  scale_y_continuous("# of events") +
+theme(strip.text.x = element_text(size = 8))
+
+ggplot(data=rbt.dat.sum.h, aes(x = month_date, y = duration)) +
+  facet_wrap(~deviceKey + desc) +
+  geom_bar(stat = "identity", fill = "steelblue")  +
+  scale_y_continuous("duration") +
+theme(strip.text.x = element_text(size = 8))
+
+# ggplot(data=rbt.dat.sum.h, aes(x = month_date, y = avgduration)) +
+#   facet_wrap(~deviceKey + desc) +
+#   geom_bar(stat = "identity", fill = "steelblue")  +
+#   scale_y_continuous("avgduration") +
+# theme(strip.text.x = element_text(size = 8))
+
+
+```
+
